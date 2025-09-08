@@ -1,8 +1,0 @@
-template_file: "templates/uxo_report.docx"
-output_pattern: "out/{{ ProjectName }} - UXO Report {{ Date }}.docx"
-required_fields:
-  - ProjectName
-  - Date
-  - Equipment.INS.SerialNumber
-aliases:
-  INS_Serial: "Equipment.INS.SerialNumber"
