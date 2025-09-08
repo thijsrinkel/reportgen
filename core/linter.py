@@ -25,8 +25,7 @@ def lint(specs_dir: Path, job_dict: dict):
         try:
             if not Path(spec.template_file).is_file():
                 entry["error"] = f"Template not found: {spec.template_file}"
-                report.append(entry)
-                continue
+                report.append(entry); continue
 
             tpl = DocxTemplate(str(spec.template_file))
             declared = set(tpl.get_undeclared_template_variables())
