@@ -4,7 +4,13 @@ import streamlit as st
 from pydantic import ValidationError
 from jinja2.exceptions import UndefinedError
 import zipfile
-
+# --- make repo root importable ---
+from pathlib import Path
+import sys
+ROOT = Path(__file__).resolve().parents[1]  # .../reportgen
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+# ---------------------------------
 from core.models import JobData
 from core.renderer import render_all_to_memory
 
