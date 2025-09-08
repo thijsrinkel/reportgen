@@ -28,6 +28,12 @@ def render_all_to_memory(job_dict: Dict[str, Any], specs_dir: Path) -> Dict[str,
             raise ValueError(f"[{spec.name}] Missing required fields: {', '.join(missing)}")
 
         tpl = DocxTemplate(str(template_path))
+        
+        # --- DEBUG + HARD GUARD ---
+        if tpl is None or not hasattr(tpl, "jinja_env"):
+            raise RuntimeError(
+                f"[{spec.name}] DocxTemplate returned {tpl!r} "
+                f"(type={type(tpl)}) for {template_path}")
         tpl.jinja_env.undefined = StrictUndefined
         tpl.jinja_env.filters["datetimeformat"] = datetimeformat
         tpl.render(context)
