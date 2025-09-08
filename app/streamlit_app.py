@@ -92,65 +92,38 @@ with st.sidebar:
 st.header(f"Edit: {st.session_state.current_job}")
 data = st.session_state.jobs[st.session_state.current_job]
 
-# Ensure nested structures exist so the form can render all fields
-data.setdefault("ClientName", "")
-data.setdefault("SurveyVessel", "")
-data.setdefault("Notes", "")
-data.setdefault("Equipment", {})
-data["Equipment"].setdefault("MBES", {})
-data["Equipment"].setdefault("INS", {})
-for sensor in ("MBES", "INS"):
-    data["Equipment"][sensor].setdefault("Make", "")
-    data["Equipment"][sensor].setdefault("Model", "")
-    data["Equipment"][sensor].setdefault("SerialNumber", "")
-
-data.setdefault("Operators", {})
-data["Operators"].setdefault("PartyChief", "")
-data["Operators"].setdefault("Surveyor", "")
-
-
-from datetime import date as _date
+# defaults so fields always show
+defaults = {
+    "CaissonNumber": "",
+    "IP_1": "", "IP_2": "",
+    "SN_SBG1": "", "SN_Septentrio1": "", "SN_Ant1": "", "SN_Ant2": "",
+    "SN_SBG2": "", "SN_Septentrio2": "", "SN_Ant3": "", "SN_Ant4": "",
+}
+for k, v in defaults.items():
+    data.setdefault(k, v)
 
 with st.form("job-form"):
-    st.subheader("General")
-    data["ProjectName"] = st.text_input("ProjectName", value=data.get("ProjectName",""))
-    data["ClientName"]  = st.text_input("ClientName",  value=data.get("ClientName",""))
+    st.subheader("Caisson & System IDs")
+    data["CaissonNumber"] = st.text_input("CaissonNumber", value=data.get("CaissonNumber",""))
 
-    # Date as a proper date picker, but we store as ISO string
-    cur_date = data.get("Date") or "2025-01-01"
-    try:
-        default_dt = _date.fromisoformat(str(cur_date))
-    except Exception:
-        default_dt = _date.today()
-    picked = st.date_input("Date", value=default_dt)
-    data["Date"] = picked.isoformat()
-
-    st.subheader("Vessel & Notes")
-    data["SurveyVessel"] = st.text_input("SurveyVessel", value=data.get("SurveyVessel",""))
-    data["Notes"]        = st.text_area("Notes", value=data.get("Notes",""))
-
-    # Equipment
-    with st.expander("Equipment", expanded=True):
-        for sensor in ("MBES", "INS"):
-            st.markdown(f"**{sensor}**")
-            s = data["Equipment"][sensor]
-            s["Make"]         = st.text_input(f"{sensor} Make",  value=s.get("Make",""), key=f"{sensor}_Make")
-            s["Model"]        = st.text_input(f"{sensor} Model", value=s.get("Model",""), key=f"{sensor}_Model")
-            s["SerialNumber"] = st.text_input(f"{sensor} SerialNumber", value=s.get("SerialNumber",""), key=f"{sensor}_SN")
-            st.divider()
-
-    # Operators
-    with st.expander("Operators", expanded=True):
-        ops = data["Operators"]
-        ops["PartyChief"] = st.text_input("Party Chief", value=ops.get("PartyChief",""))
-        ops["Surveyor"]   = st.text_input("Surveyor",    value=ops.get("Surveyor",""))
+    c1, c2 = st.columns(2)
+    with c1:
+        data["IP_1"] = st.text_input("IP_1", value=data.get("IP_1",""))
+        data["SN_SBG1"] = st.text_input("SN_SBG1", value=data.get("SN_SBG1",""))
+        data["SN_Septentrio1"] = st.text_input("SN_Septentrio1", value=data.get("SN_Septentrio1",""))
+        data["SN_Ant1"] = st.text_input("SN_Ant1", value=data.get("SN_Ant1",""))
+        data["SN_Ant2"] = st.text_input("SN_Ant2", value=data.get("SN_Ant2",""))
+    with c2:
+        data["IP_2"] = st.text_input("IP_2", value=data.get("IP_2",""))
+        data["SN_SBG2"] = st.text_input("SN_SBG2", value=data.get("SN_SBG2",""))
+        data["SN_Septentrio2"] = st.text_input("SN_Septentrio2", value=data.get("SN_Septentrio2",""))
+        data["SN_Ant3"] = st.text_input("SN_Ant3", value=data.get("SN_Ant3",""))
+        data["SN_Ant4"] = st.text_input("SN_Ant4", value=data.get("SN_Ant4",""))
 
     submitted = st.form_submit_button("Save changes")
     if submitted:
-        # store normalized data back to session
         st.session_state.jobs[st.session_state.current_job] = data
         st.success("Saved.")
-
 
 st.subheader("Make reports")
 if st.button("Render all"):
