@@ -2,7 +2,8 @@
 import streamlit as st
 from pathlib import Path
 from io import BytesIO
-import zipfile, yaml, json
+import zipfile, json
+import yaml
 from pydantic import ValidationError
 from jinja2.exceptions import UndefinedError
 
