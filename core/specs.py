@@ -17,7 +17,8 @@ def load_spec_files(specs_dir: Path):
     specs = []
     for p in specs_dir.glob("*.yaml"):
         s = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-        tpl_path = (ROOT / s["template_file"]).resolve()  # << key line
+        # resolve the template path from the repo root
+        tpl_path = (ROOT / s["template_file"]).resolve()
         specs.append(TemplateSpec(
             name=p.stem,
             template_file=tpl_path,
