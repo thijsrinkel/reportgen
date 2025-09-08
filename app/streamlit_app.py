@@ -1,98 +1,28 @@
-# --- add this at the very top of app/streamlit_app.py ---
-from pathlib import Path
-import sys
-ROOT = Path(__file__).resolve().parents[1]   # the repo root (…/reportgen)
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-# --------------------------------------------------------
 # app/streamlit_app.py
-import streamlit as st
 from pathlib import Path
 from io import BytesIO
-import zipfile, json
-import yaml
+import streamlit as st
 from pydantic import ValidationError
 from jinja2.exceptions import UndefinedError
+import zipfile
 
 from core.models import JobData
 from core.renderer import render_all_to_memory
-from core.linter import lint
 
+ROOT = Path(__file__).resolve().parents[1]
 SPECS_DIR = ROOT / "template_specs"
 
-st.set_page_config(page_title="ReportGen", layout="wide")
+st.set_page_config(page_title="Caisson ReportGen", layout="centered")
 
-tmpl_dir = ROOT / "templates"
-st.caption(f"Templates dir: {tmpl_dir}")
-st.caption(f"Templates found: {[p.name for p in tmpl_dir.glob('*.docx')]}")
+# keep one data dict in session
+if "data" not in st.session_state:
+    st.session_state.data = {}
 
-# session state
-if "jobs" not in st.session_state:
-    st.session_state.jobs = {"Job 1": {"ProjectName":"", "Date":"2025-01-01"}}
-if "current_job" not in st.session_state:
-    st.session_state.current_job = "Job 1"
-if "rendered" not in st.session_state:
-    st.session_state.rendered = {}
+data = st.session_state.data
 
-# --- Sidebar ---
-with st.sidebar:
-    st.title("ReportGen")
+st.title("Caisson Installation & Calibration Report")
 
-    # choose job
-    names = list(st.session_state.jobs.keys())
-    pick = st.selectbox("Choose job", names, index=names.index(st.session_state.current_job))
-    if pick != st.session_state.current_job:
-        st.session_state.current_job = pick
-
-    # new / copy
-    c1, c2 = st.columns(2)
-    if c1.button("New job"):
-        name = f"Job {len(st.session_state.jobs)+1}"
-        st.session_state.jobs[name] = {}
-        st.session_state.current_job = name
-    if c2.button("Copy job"):
-        name = f"{st.session_state.current_job} (copy)"
-        st.session_state.jobs[name] = dict(st.session_state.jobs[st.session_state.current_job])
-        st.session_state.current_job = name
-
-    st.divider()
-
-    # load file
-    up = st.file_uploader("Load YAML/JSON", type=["yaml","yml","json"])
-    if up:
-        try:
-            data = yaml.safe_load(up.read()) if up.name.endswith((".yaml",".yml")) else json.loads(up.read())
-            st.session_state.jobs[st.session_state.current_job] = data or {}
-            st.success("Loaded.")
-        except Exception as e:
-            st.error(f"Could not load: {e}")
-
-    # save file
-    cur = st.session_state.jobs[st.session_state.current_job]
-    st.download_button("Save as YAML", yaml.safe_dump(cur or {}, sort_keys=False, allow_unicode=True), file_name=f"{st.session_state.current_job}.yaml")
-    json_text = json.dumps(cur or {}, indent=2, ensure_ascii=False, default=str)
-    st.download_button("Save as JSON", json_text, file_name=f"{st.session_state.current_job}.json")
-
-
-    st.divider()
-    if st.button("Placeholder linter"):
-        rep = lint(SPECS_DIR, cur or {})
-        for r in rep:
-            st.subheader(f"Template: {r['template']}")
-            st.caption(f"Path: {r['template_file']}")
-            if r.get("error"):
-                st.error(r["error"])
-            elif r["unresolved"]:
-                st.error("Unresolved: " + ", ".join(r["unresolved"]))
-            else:
-                st.success("All placeholders look resolvable.")
-
-
-# --- Main: form ---
-st.header(f"Edit: {st.session_state.current_job}")
-data = st.session_state.jobs[st.session_state.current_job]
-
-# defaults so fields always show
+# --- FORM ---
 defaults = {
     "CaissonNumber": "",
     "IP_1": "", "IP_2": "",
@@ -122,72 +52,35 @@ with st.form("job-form"):
 
     submitted = st.form_submit_button("Save changes")
     if submitted:
-        st.session_state.jobs[st.session_state.current_job] = data
         st.success("Saved.")
 
-st.subheader("Make reports")
-if st.button("Render all"):
+# --- RENDER ---
+if st.button("Render report"):
     try:
-        # sanitize before validate
-        def _none_if_empty(v):
-            if isinstance(v, str) and not v.strip():
-                return None
-            if isinstance(v, dict) and not any(v.values()):
-                return None
-            return v
-        for key in ("Equipment", "Operators"):
-            if key in data:
-                data[key] = _none_if_empty(data[key])
-
-        # Pydantic check
         job = JobData.model_validate(data)
         outputs = render_all_to_memory(job.model_dump(), SPECS_DIR)
         st.session_state.rendered = outputs
-        st.success(f"Made {len(outputs)} file(s). See buttons below.")
-
+        st.success(f"Generated {len(outputs)} report(s).")
     except ValidationError as ve:
-        st.error("Your data has a problem.")
-        st.caption("Example: missing ProjectName, or Date not like 2025-01-31.")
+        st.error("Some required data is missing or invalid.")
         with st.expander("Details"):
             for e in ve.errors():
                 st.write(f"{e['loc']}: {e['msg']}")
-    except UndefinedError as ue:
+    except UndefinedError:
         st.error("A placeholder in the template was not found.")
-        st.caption("Open the linter in the sidebar to see which one.")
-    except ValueError as ve:
-        st.error(str(ve))
     except Exception as e:
-        st.error(f"Something else went wrong: {e}")
+        st.error(f"Something went wrong: {e}")
 
-
-if st.button("Self-test one template (temporary)"):
-    try:
-        from docxtpl import DocxTemplate
-        from jinja2 import Environment, StrictUndefined
-        test_path = (ROOT / "templates" / "cable_report.docx")
-        st.write(f"Opening: {test_path}")
-        tpl = DocxTemplate(str(test_path))
-        env = Environment(undefined=StrictUndefined, autoescape=False)
-        env.filters["datetimeformat"] = lambda v, fmt="%Y-%m-%d": str(v)
-        tpl.render({"ProjectName": "X", "Date": "2025-01-01"}, jinja_env=env)
-        buf = BytesIO(); tpl.save(buf)
-        st.success("Self-test passed (opened, rendered, saved).")
-    except Exception as e:
-        import traceback
-        st.error(f"Self-test failed: {e}")
-        st.code("".join(traceback.format_exc()))
-
-
-# download buttons
-if st.session_state.rendered:
-    st.success("Downloads:")
+# --- DOWNLOAD ---
+if "rendered" in st.session_state and st.session_state.rendered:
+    st.subheader("Download")
     for fname, blob in st.session_state.rendered.items():
         name = Path(fname).name
-        st.download_button(f"Download {name}", data=blob, file_name=name, mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(f"Download {name}", data=blob, file_name=name)
 
-    # ZIP
-    zbuf = BytesIO()
-    with zipfile.ZipFile(zbuf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for fname, blob in st.session_state.rendered.items():
-            zf.writestr(Path(fname).name, blob)
-    st.download_button("Download ALL as ZIP", data=zbuf.getvalue(), file_name="reports.zip", mime="application/zip")
+    if len(st.session_state.rendered) > 1:
+        zbuf = BytesIO()
+        with zipfile.ZipFile(zbuf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for fname, blob in st.session_state.rendered.items():
+                zf.writestr(Path(fname).name, blob)
+        st.download_button("Download ALL as ZIP", data=zbuf.getvalue(), file_name="reports.zip", mime="application/zip")
