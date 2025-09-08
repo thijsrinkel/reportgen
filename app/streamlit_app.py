@@ -18,7 +18,7 @@ from core.models import JobData
 from core.renderer import render_all_to_memory
 from core.linter import lint
 
-SPECS_DIR = Path("template_specs")
+SPECS_DIR = ROOT / "template_specs"
 
 st.set_page_config(page_title="ReportGen", layout="wide")
 
