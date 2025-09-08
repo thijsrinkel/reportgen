@@ -186,6 +186,25 @@ if st.button("Render all"):
     except Exception as e:
         st.error(f"Something else went wrong: {e}")
 
+
+if st.button("Self-test one template (temporary)"):
+    try:
+        from docxtpl import DocxTemplate
+        test_path = (ROOT / "templates" / "cable_report.docx")
+        st.write(f"Opening: {test_path}")
+        tpl = DocxTemplate(str(test_path))
+        st.write(f"type(tpl)={type(tpl)}, has jinja_env? {hasattr(tpl, 'jinja_env')}")
+        from jinja2 import StrictUndefined
+        tpl.jinja_env.undefined = StrictUndefined
+        tpl.render({"ProjectName": "X", "Date": "2025-01-01"})
+        from io import BytesIO
+        buf = BytesIO(); tpl.save(buf)
+        st.success("Self-test passed (opened, rendered, saved).")
+    except Exception as e:
+        import traceback
+        st.error(f"Self-test failed: {e}")
+        st.code("".join(traceback.format_exc()))
+
 # download buttons
 if st.session_state.rendered:
     st.success("Downloads:")
