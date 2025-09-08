@@ -135,21 +135,15 @@ with st.form("job-form"):
 # Render
 if st.button("Render reports"):
     try:
-        # validate your static fields only
         job = JobData.model_validate(data)
-        # combine with excel-derived placeholders
         combined = {**job.model_dump(), **st.session_state.get("excel_vals", {})}
         outputs = render_all_to_memory(combined, SPECS_DIR)
         st.session_state["rendered"] = outputs
         st.success(f"Generated {len(outputs)} report(s).")
-    except ValidationError as ve:
-        st.error("Some required data is missing or invalid.")
-        with st.expander("Details"):
-            for e in ve.errors():
-                st.write(f"{e['loc']}: {e['msg']}")
     except Exception as e:
-        st.error(f"Something went wrong: {e}")
+        st.error(f"Render failed: {e}")
         import traceback; st.code("".join(traceback.format_exc()))
+
 
 # Download
 if "rendered" in st.session_state and st.session_state.rendered:
