@@ -99,11 +99,23 @@ with st.form("job-form"):
 st.subheader("Make reports")
 if st.button("Render all"):
     try:
+        # sanitize before validate
+        def _none_if_empty(v):
+            if isinstance(v, str) and not v.strip():
+                return None
+            if isinstance(v, dict) and not any(v.values()):
+                return None
+            return v
+        for key in ("Equipment", "Operators"):
+            if key in data:
+                data[key] = _none_if_empty(data[key])
+
         # Pydantic check
         job = JobData.model_validate(data)
         outputs = render_all_to_memory(job.model_dump(), SPECS_DIR)
         st.session_state.rendered = outputs
         st.success(f"Made {len(outputs)} file(s). See buttons below.")
+
     except ValidationError as ve:
         st.error("Your data has a problem.")
         st.caption("Example: missing ProjectName, or Date not like 2025-01-31.")
