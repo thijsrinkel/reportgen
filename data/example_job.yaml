@@ -1,0 +1,17 @@
+ProjectName: "Hornsea 3 – Cable Route A"
+ClientName: "Ørsted"
+Date: 2025-09-01
+SurveyVessel: "MV Ocean Scout"
+Equipment:
+  MBES:
+    Make: "Kongsberg"
+    Model: "EM2040C"
+    SerialNumber: "2040C-12345"
+  INS:
+    Make: "Applanix"
+    Model: "POS MV"
+    SerialNumber: "POS-67890"
+Operators:
+  PartyChief: "Thijs Rinkel"
+  Surveyor: "Jane Smith"
+Notes: "Fair weather, minor swell."
