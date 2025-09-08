@@ -1,3 +1,10 @@
+# --- add this at the very top of app/streamlit_app.py ---
+from pathlib import Path
+import sys
+ROOT = Path(__file__).resolve().parents[1]   # the repo root (…/reportgen)
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+# --------------------------------------------------------
 # app/streamlit_app.py
 import streamlit as st
 from pathlib import Path
