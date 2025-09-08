@@ -17,9 +17,10 @@ def load_spec_files(specs_dir: Path):
     specs = []
     for p in specs_dir.glob("*.yaml"):
         s = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        tpl_path = (ROOT / s["template_file"]).resolve()  # << key line
         specs.append(TemplateSpec(
             name=p.stem,
-            template_file=Path(s["template_file"]),
+            template_file=tpl_path,
             output_pattern=s["output_pattern"],
             required_fields=s.get("required_fields", []),
             aliases=s.get("aliases", {}),
