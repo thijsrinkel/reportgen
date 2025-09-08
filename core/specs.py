@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import yaml
 
+ROOT = Path(__file__).resolve().parents[1]  # .../reportgen
+
 @dataclass
 class TemplateSpec:
     name: str
