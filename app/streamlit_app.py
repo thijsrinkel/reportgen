@@ -22,6 +22,10 @@ SPECS_DIR = ROOT / "template_specs"
 
 st.set_page_config(page_title="ReportGen", layout="wide")
 
+tmpl_dir = ROOT / "templates"
+st.caption(f"Templates dir: {tmpl_dir}")
+st.caption(f"Templates found: {[p.name for p in tmpl_dir.glob('*.docx')]}")
+
 # session state
 if "jobs" not in st.session_state:
     st.session_state.jobs = {"Job 1": {"ProjectName":"", "Date":"2025-01-01"}}
