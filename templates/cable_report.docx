@@ -1,0 +1,20 @@
+Cable Route Survey Report
+=========================
+
+Project: {{ ProjectName }}
+Client: {{ ClientName }}
+Date: {{ Date | datetimeformat }}
+
+Survey Vessel: {{ SurveyVessel }}
+
+Multibeam Echosounder (MBES)
+----------------------------
+Make: {{ Equipment.MBES.Make }}
+Model: {{ Equipment.MBES.Model }}
+Serial Number: {{ Equipment.MBES.SerialNumber }}
+
+Party Chief: {{ Operators.PartyChief }}
+Surveyor: {{ Operators.Surveyor }}
+
+Notes:
+{{ Notes }}
