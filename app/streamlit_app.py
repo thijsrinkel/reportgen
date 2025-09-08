@@ -21,6 +21,50 @@ SPECS_DIR = ROOT / "template_specs"
 st.set_page_config(page_title="Caisson Reports", layout="centered")
 st.title("Caisson Reports")
 
+from core.excel_parser import list_sheet_names, parse_excel_nodes
+
+st.subheader("Excel nodes (optional)")
+uploaded = st.file_uploader("Upload Excel (.xlsx)", type=["xlsx"])
+
+# keep parsed excel values in session
+excel_vals = st.session_state.setdefault("excel_vals", {})
+
+if uploaded:
+    try:
+        # list sheets for user to choose
+        sheets = list_sheet_names(uploaded)
+        sheet = st.selectbox("Choose sheet", sheets, key="sheet_pick")
+
+        # let user specify column names if their sheet uses different headers
+        with st.expander("Columns (change if headers differ)", expanded=False):
+            node_col = st.text_input("Node column", value="Node")
+            x_col = st.text_input("X column", value="X")
+            y_col = st.text_input("Y column", value="Y")
+            z_col = st.text_input("Z column", value="Z")
+
+        # (optional) filter which nodes to include
+        filter_text = st.text_input("Only include these node names (comma separated)", value="")
+        only_nodes = [s.strip() for s in filter_text.split(",") if s.strip()] or None
+
+        if st.button("Load nodes from Excel"):
+            # IMPORTANT: uploaded is a stream; re-seek to start before each read
+            uploaded.seek(0)
+            excel_vals = parse_excel_nodes(
+                uploaded, sheet_name=sheet,
+                node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
+                only_nodes=only_nodes
+            )
+            st.session_state["excel_vals"] = excel_vals
+            st.success(f"Loaded {len(excel_vals)} placeholders from sheet '{sheet}'.")
+            # small preview
+            preview_keys = sorted(list(excel_vals.keys()))[:12]
+            if preview_keys:
+                st.caption("Preview (first ~12 keys):")
+                st.code(", ".join(preview_keys))
+    except Exception as e:
+        st.error(f"Excel error: {e}")
+
+
 # keep one data dict in session
 if "data" not in st.session_state:
     st.session_state.data = {}
