@@ -3,16 +3,16 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 
-class Equipment(BaseModel):
+class EquipmentModel(BaseModel):
     Make: Optional[str] = None
     Model: Optional[str] = None
     SerialNumber: Optional[str] = None
 
-class Sensors(BaseModel):
-    MBES: Optional[Equipment] = None
-    INS: Optional[Equipment] = None
+class SensorsModel(BaseModel):
+    MBES: Optional[EquipmentModel] = None
+    INS: Optional[EquipmentModel] = None
 
-class Operators(BaseModel):
+class OperatorsModel(BaseModel):
     PartyChief: Optional[str] = None
     Surveyor: Optional[str] = None
 
@@ -21,6 +21,6 @@ class JobData(BaseModel):
     ClientName: Optional[str] = None
     Date: date
     SurveyVessel: Optional[str] = None
-    Equipment: Optional[Sensors] = None
-    Operators: Optional[Operators] = None
+    Equipment: Optional[SensorsModel] = None   # ✅ Optional
+    Operators: Optional[OperatorsModel] = None # ✅ Optional
     Notes: Optional[str] = None
