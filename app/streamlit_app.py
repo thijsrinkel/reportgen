@@ -79,7 +79,7 @@ with st.sidebar:
         rep = lint(SPECS_DIR, cur or {})
         for r in rep:
             st.subheader(f"Template: {r['template']}")
-            st.caption(r["template_file"])
+            st.caption(f"Path: {r['template_file']}")
             if r.get("error"):
                 st.error(r["error"])
             elif r["unresolved"]:
