@@ -1,5 +1,5 @@
 template_file: "templates/MOG2-EDI-ISZ-TNI-REP-00XX Installation and Calibration Report Caisson XX.docx"
-output_pattern: "out/Caisson {{ CaissonNumber }} - Installation & Calibration.docx"
+output_pattern: "out/{{ MCRDocumentReference }} Installation and Calibration Report Caisson {{ CaissonNumber }}.docx"
 required_fields:
   - CaissonNumber
   - IP_1
