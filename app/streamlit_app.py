@@ -1,4 +1,3 @@
-# app/streamlit_app.py
 from pathlib import Path
 from io import BytesIO
 import streamlit as st
@@ -9,10 +8,12 @@ import zipfile
 from core.models import JobData
 from core.renderer import render_all_to_memory
 
+# repo root + specs dir
 ROOT = Path(__file__).resolve().parents[1]
 SPECS_DIR = ROOT / "template_specs"
 
-st.set_page_config(page_title="Caisson ReportGen", layout="centered")
+st.set_page_config(page_title="Caisson Reports", layout="centered")
+st.title("Caisson Reports")
 
 # keep one data dict in session
 if "data" not in st.session_state:
@@ -20,14 +21,14 @@ if "data" not in st.session_state:
 
 data = st.session_state.data
 
-st.title("Caisson Installation & Calibration Report")
-
-# --- FORM ---
+# defaults so inputs always show
 defaults = {
     "CaissonNumber": "",
     "IP_1": "", "IP_2": "",
     "SN_SBG1": "", "SN_Septentrio1": "", "SN_Ant1": "", "SN_Ant2": "",
     "SN_SBG2": "", "SN_Septentrio2": "", "SN_Ant3": "", "SN_Ant4": "",
+    "MCRDocumentReference": "", "DIMCONDocumentReference": "",
+    "DocumentReference8": "", "DocumentReference9": "",
 }
 for k, v in defaults.items():
     data.setdefault(k, v)
@@ -50,15 +51,24 @@ with st.form("job-form"):
         data["SN_Ant3"] = st.text_input("SN_Ant3", value=data.get("SN_Ant3",""))
         data["SN_Ant4"] = st.text_input("SN_Ant4", value=data.get("SN_Ant4",""))
 
+    st.subheader("Document References")
+    c3, c4 = st.columns(2)
+    with c3:
+        data["MCRDocumentReference"] = st.text_input("MCRDocumentReference", value=data.get("MCRDocumentReference",""))
+        data["DocumentReference8"] = st.text_input("DocumentReference8", value=data.get("DocumentReference8",""))
+    with c4:
+        data["DIMCONDocumentReference"] = st.text_input("DIMCONDocumentReference", value=data.get("DIMCONDocumentReference",""))
+        data["DocumentReference9"] = st.text_input("DocumentReference9", value=data.get("DocumentReference9",""))
+
     submitted = st.form_submit_button("Save changes")
     if submitted:
         st.success("Saved.")
 
-# --- RENDER ---
-if st.button("Render report"):
+# Render
+if st.button("Render reports"):
     try:
-        job = JobData.model_validate(data)
-        outputs = render_all_to_memory(job.model_dump(), SPECS_DIR)
+        job = JobData.model_validate(data)                      # schema check
+        outputs = render_all_to_memory(job.model_dump(), SPECS_DIR)  # both templates
         st.session_state.rendered = outputs
         st.success(f"Generated {len(outputs)} report(s).")
     except ValidationError as ve:
@@ -66,12 +76,14 @@ if st.button("Render report"):
         with st.expander("Details"):
             for e in ve.errors():
                 st.write(f"{e['loc']}: {e['msg']}")
-    except UndefinedError:
-        st.error("A placeholder in the template was not found.")
+    except UndefinedError as ue:
+        st.error("Template contains a placeholder your data doesn't have.")
+        with st.expander("Details"):
+            st.write(str(ue))
     except Exception as e:
         st.error(f"Something went wrong: {e}")
 
-# --- DOWNLOAD ---
+# Download
 if "rendered" in st.session_state and st.session_state.rendered:
     st.subheader("Download")
     for fname, blob in st.session_state.rendered.items():
