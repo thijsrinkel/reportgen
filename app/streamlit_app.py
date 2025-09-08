@@ -92,18 +92,65 @@ with st.sidebar:
 st.header(f"Edit: {st.session_state.current_job}")
 data = st.session_state.jobs[st.session_state.current_job]
 
+# Ensure nested structures exist so the form can render all fields
+data.setdefault("ClientName", "")
+data.setdefault("SurveyVessel", "")
+data.setdefault("Notes", "")
+data.setdefault("Equipment", {})
+data["Equipment"].setdefault("MBES", {})
+data["Equipment"].setdefault("INS", {})
+for sensor in ("MBES", "INS"):
+    data["Equipment"][sensor].setdefault("Make", "")
+    data["Equipment"][sensor].setdefault("Model", "")
+    data["Equipment"][sensor].setdefault("SerialNumber", "")
+
+data.setdefault("Operators", {})
+data["Operators"].setdefault("PartyChief", "")
+data["Operators"].setdefault("Surveyor", "")
+
+
+from datetime import date as _date
+
 with st.form("job-form"):
-    # simple fields (add more as you need)
+    st.subheader("General")
     data["ProjectName"] = st.text_input("ProjectName", value=data.get("ProjectName",""))
     data["ClientName"]  = st.text_input("ClientName",  value=data.get("ClientName",""))
-    data["Date"]        = st.text_input("Date (YYYY-MM-DD)", value=str(data.get("Date","2025-01-01")))
-    data["SurveyVessel"]= st.text_input("SurveyVessel", value=data.get("SurveyVessel",""))
-    data["Notes"]       = st.text_area("Notes", value=data.get("Notes",""))
+
+    # Date as a proper date picker, but we store as ISO string
+    cur_date = data.get("Date") or "2025-01-01"
+    try:
+        default_dt = _date.fromisoformat(str(cur_date))
+    except Exception:
+        default_dt = _date.today()
+    picked = st.date_input("Date", value=default_dt)
+    data["Date"] = picked.isoformat()
+
+    st.subheader("Vessel & Notes")
+    data["SurveyVessel"] = st.text_input("SurveyVessel", value=data.get("SurveyVessel",""))
+    data["Notes"]        = st.text_area("Notes", value=data.get("Notes",""))
+
+    # Equipment
+    with st.expander("Equipment", expanded=True):
+        for sensor in ("MBES", "INS"):
+            st.markdown(f"**{sensor}**")
+            s = data["Equipment"][sensor]
+            s["Make"]         = st.text_input(f"{sensor} Make",  value=s.get("Make",""), key=f"{sensor}_Make")
+            s["Model"]        = st.text_input(f"{sensor} Model", value=s.get("Model",""), key=f"{sensor}_Model")
+            s["SerialNumber"] = st.text_input(f"{sensor} SerialNumber", value=s.get("SerialNumber",""), key=f"{sensor}_SN")
+            st.divider()
+
+    # Operators
+    with st.expander("Operators", expanded=True):
+        ops = data["Operators"]
+        ops["PartyChief"] = st.text_input("Party Chief", value=ops.get("PartyChief",""))
+        ops["Surveyor"]   = st.text_input("Surveyor",    value=ops.get("Surveyor",""))
 
     submitted = st.form_submit_button("Save changes")
     if submitted:
+        # store normalized data back to session
         st.session_state.jobs[st.session_state.current_job] = data
         st.success("Saved.")
+
 
 st.subheader("Make reports")
 if st.button("Render all"):
