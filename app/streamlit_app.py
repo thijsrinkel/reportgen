@@ -66,7 +66,9 @@ with st.sidebar:
     # save file
     cur = st.session_state.jobs[st.session_state.current_job]
     st.download_button("Save as YAML", yaml.safe_dump(cur or {}, sort_keys=False, allow_unicode=True), file_name=f"{st.session_state.current_job}.yaml")
-    st.download_button("Save as JSON", json.dumps(cur or {}, indent=2, ensure_ascii=False), file_name=f"{st.session_state.current_job}.json")
+    json_text = json.dumps(cur or {}, indent=2, ensure_ascii=False, default=str)
+    st.download_button("Save as JSON", json_text, file_name=f"{st.session_state.current_job}.json")
+
 
     st.divider()
     if st.button("Placeholder linter"):
