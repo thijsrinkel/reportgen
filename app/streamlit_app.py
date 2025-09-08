@@ -76,12 +76,17 @@ with st.sidebar:
 
     st.divider()
     if st.button("Placeholder linter"):
-        rep = lint(SPECS_DIR, cur or {})
-        for r in rep:
-            if r["unresolved"]:
-                st.error(f"{r['template']}: {', '.join(r['unresolved'])}")
-            else:
-                st.success(f"{r['template']}: all good")
+    rep = lint(SPECS_DIR, cur or {})
+    for r in rep:
+        st.subheader(f"Template: {r['template']}")
+        st.caption(r["template_file"])
+        if r.get("error"):
+            st.error(r["error"])
+        elif r["unresolved"]:
+            st.error("Unresolved: " + ", ".join(r["unresolved"]))
+        else:
+            st.success("All placeholders look resolvable.")
+
 
 # --- Main: form ---
 st.header(f"Edit: {st.session_state.current_job}")
