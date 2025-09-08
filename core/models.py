@@ -18,9 +18,15 @@ class OperatorsModel(BaseModel):
 
 class JobData(BaseModel):
     ProjectName: str
-    ClientName: Optional[str] = None
-    Date: date
-    SurveyVessel: Optional[str] = None
-    Equipment: Optional[SensorsModel] = None   # ✅ Optional
-    Operators: Optional[OperatorsModel] = None # ✅ Optional
-    Notes: Optional[str] = None
+    # ...existing fields...
+    CaissonNumber: str | None = None
+    IP_1: str | None = None
+    IP_2: str | None = None
+    SN_SBG1: str | None = None
+    SN_Septentrio1: str | None = None
+    SN_Ant1: str | None = None
+    SN_Ant2: str | None = None
+    SN_SBG2: str | None = None
+    SN_Septentrio2: str | None = None
+    SN_Ant3: str | None = None
+    SN_Ant4: str | None = None
