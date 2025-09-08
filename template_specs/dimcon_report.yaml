@@ -1,0 +1,17 @@
+template_file: "templates/MOG2-EDI-ISZ-TNI-REP-00XX Offset Measurement Report Caisson XX.docx"
+output_pattern: "out/Caisson {{ CaissonNumber }} - Offset Measurement.docx"
+required_fields:
+  - CaissonNumber
+  - IP_1
+  - IP_2
+  - SN_SBG1
+  - SN_Ant1
+  - SN_Ant2
+  - SN_SBG2
+  - SN_Ant3
+  - SN_Ant4
+  - MCRDocumentReference
+  - DIMCONDocumentReference
+  - DocumentReference8
+  - DocumentReference9
+aliases: {}
