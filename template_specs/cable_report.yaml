@@ -1,8 +1,0 @@
-template_file: "templates/cable_report.docx"
-output_pattern: "out/{{ ProjectName }} - Cable Report {{ Date }}.docx"
-required_fields:
-  - ProjectName
-  - Date
-  - Equipment.MBES.SerialNumber
-aliases:               # if the docx uses slightly different names
-  SerialNumber: "Equipment.MBES.SerialNumber"
