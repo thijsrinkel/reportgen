@@ -3,6 +3,8 @@ from io import BytesIO
 from pathlib import Path
 from jinja2 import StrictUndefined, Environment
 from docxtpl import DocxTemplate
+from typing import Dict, Any
+
 from .filters import datetimeformat
 from .specs import load_spec_files, build_context, get_required_missing
 
