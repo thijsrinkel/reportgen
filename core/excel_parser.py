@@ -52,6 +52,14 @@ def _resolve_column(ws, spec, has_header: bool) -> int:
             raise KeyError(f"Header '{s}' not found. Available headers: {headers}")
         return i
     raise KeyError(f"Column '{s}' not found. Use letters (A,B,C,…) or enable 'has header'.")
+    
+def _fmt3(v):
+    if v is None:
+        return None
+    try:
+        return f"{float(v):.3f}"   # string like 0.000
+    except Exception:
+        return v
 
 def parse_excel_nodes_bytes(
     file_bytes: bytes,
@@ -123,9 +131,10 @@ def parse_excel_nodes_bytes(
                 except IndexError:
                     return None
 
-            out[f"{key}_X"] = _val(i_x)
-            out[f"{key}_Y"] = _val(i_y)
-            out[f"{key}_Z"] = _val(i_z)
+            out[f"{key}_X"] = _fmt3(_val(i_x))
+            out[f"{key}_Y"] = _fmt3(_val(i_y))
+            out[f"{key}_Z"] = _fmt3(_val(i_z))
+
 
         return out
     finally:
