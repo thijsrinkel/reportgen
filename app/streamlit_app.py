@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]  # repo root
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 # ---------------------------------------------
-st.image("img/TM_Edison_logo.jpg", width=150)
+st.image("img/TM Edison.png", width=150)
 st.set_page_config(page_title="MOG 2 MCR & DIMCON Report Generator", layout="centered")
 st.title("MOG 2 MCR & DIMCON Report Generator")
 
