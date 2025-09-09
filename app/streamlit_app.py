@@ -11,8 +11,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 # ---------------------------------------------
 
-st.set_page_config(page_title="Caisson Reports", layout="centered")
-st.title("Caisson Reports")
+st.set_page_config(page_title="MOG 2 MCR & DIMCON Report Generator", layout="centered")
+st.title("MOG 2 MCR & DIMCON Report Generator")
 
 # ---------- SAFE IMPORTS ----------
 imports_ok = {}
