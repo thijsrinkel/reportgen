@@ -43,6 +43,7 @@ except Exception as e:
 # Excel is optional: app must still render without it
 excel_ready = True
 try:
+    # NOTE: this should be the openpyxl-only parser if you removed pandas
     from core.excel_parser import list_sheet_names_bytes, parse_excel_nodes_bytes
     imports_ok["core.excel_parser"] = True
 except Exception as e:
@@ -56,83 +57,85 @@ SPECS_DIR = ROOT / "template_specs"
 st.subheader("Excel nodes (optional)")
 uploaded = st.file_uploader("Upload Excel (.xlsx)", type=["xlsx"])
 
-# Show a quick smoke test so you know if Excel libs work
-if uploaded:
-    try:
-        import pandas as pd
-        from io import BytesIO as _BytesIO
-        xls = pd.ExcelFile(_BytesIO(uploaded.getvalue()), engine="openpyxl")
-        st.caption("Excel OK. Sheets: " + ", ".join(xls.sheet_names))
-    except Exception as e:
-        st.warning(f"Excel smoke test failed: {e}")
-
 excel_vals = st.session_state.setdefault("excel_vals", {})
 excel_bytes = st.session_state.get("excel_bytes")
 
 if uploaded:
-    excel_bytes = uploaded.getvalue()
+    excel_bytes = uploaded.getvalue()  # single read
     st.session_state["excel_bytes"] = excel_bytes
 
 if excel_bytes and excel_ready:
     try:
-        # simple (no caching) to minimize moving parts while we debug UI
+        # list sheets
         sheets = list_sheet_names_bytes(excel_bytes)
         sheet = st.selectbox("Choose sheet", sheets, key="sheet_pick")
 
-        with st.expander("Columns (change if headers differ)", expanded=False):
-            node_col = st.text_input("Node column", value="Node")
-            x_col    = st.text_input("X column", value="X")
-            y_col    = st.text_input("Y column", value="Y")
-            z_col    = st.text_input("Z column", value="Z")
+        # header handling + column specs
+        with st.expander("Columns / header options", expanded=False):
+            has_header = st.checkbox("My sheet has a header row", value=True)
+            if has_header:
+                node_col = st.text_input("Node column (header name or letter)", value="Node")
+                x_col    = st.text_input("X column (header name or letter)", value="X")
+                y_col    = st.text_input("Y column (header name or letter)", value="Y")
+                z_col    = st.text_input("Z column (header name or letter)", value="Z")
+            else:
+                node_col = st.text_input("Node column (letter or 1-based index)", value="A")
+                x_col    = st.text_input("X column (letter or 1-based index)", value="B")
+                y_col    = st.text_input("Y column (letter or 1-based index)", value="C")
+                z_col    = st.text_input("Z column (letter or 1-based index)", value="D")
 
         filter_text = st.text_input("Only include these node names (comma separated)", value="")
         only_nodes = [s.strip() for s in filter_text.split(",") if s.strip()] or None
 
-if st.button("Load nodes from Excel"):
-    excel_vals = parse_excel_nodes_bytes(
-        excel_bytes, sheet,
-        node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
-        only_nodes=only_nodes,
-        has_header=has_header,
-    )
-    st.session_state["excel_vals"] = excel_vals
-    st.success(f"Loaded {len(excel_vals)} placeholders from '{sheet}'.")
+        # >>> this button & viewer MUST be inside the try: block <<<
+        if st.button("Load nodes from Excel"):
+            excel_vals = parse_excel_nodes_bytes(
+                excel_bytes,
+                sheet_name=sheet,
+                node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
+                only_nodes=only_nodes,
+                has_header=has_header,
+            )
+            st.session_state["excel_vals"] = excel_vals
+            st.success(f"Loaded {len(excel_vals)} placeholders from '{sheet}'.")
 
-    # --- NEW full viewer instead of just 12 keys ---
-    all_items = sorted(excel_vals.items(), key=lambda kv: kv[0])
-    st.caption(f"{len(all_items)} placeholders loaded.")
+            # ---- FULL VIEWER (all placeholders) ----
+            all_items = sorted(excel_vals.items(), key=lambda kv: kv[0])
+            st.caption(f"{len(all_items)} placeholders loaded.")
 
-    q = st.text_input("Filter placeholders (case-insensitive)", value="")
-    if q:
-        ql = q.lower()
-        view_items = [kv for kv in all_items if ql in kv[0].lower()]
-    else:
-        view_items = all_items
+            q = st.text_input("Filter placeholders (case-insensitive)", value="")
+            if q:
+                ql = q.lower()
+                view_items = [kv for kv in all_items if ql in kv[0].lower()]
+            else:
+                view_items = all_items
 
-    PAGE_SIZE = 200
-    num_pages = max(1, (len(view_items) + PAGE_SIZE - 1) // PAGE_SIZE)
-    page = st.number_input("Page", min_value=1, max_value=num_pages, value=1, step=1)
-    start = (page - 1) * PAGE_SIZE
-    end = start + PAGE_SIZE
-    page_items = view_items[start:end]
+            # optional paging for very large lists
+            PAGE_SIZE = 200
+            num_pages = max(1, (len(view_items) + PAGE_SIZE - 1) // PAGE_SIZE)
+            page = st.number_input("Page", min_value=1, max_value=num_pages, value=1, step=1)
+            start = (page - 1) * PAGE_SIZE
+            end = start + PAGE_SIZE
+            page_items = view_items[start:end]
 
-    rows = [{"placeholder": k, "value": v} for k, v in page_items]
-    st.dataframe(rows, hide_index=True, use_container_width=True)
+            rows = [{"placeholder": k, "value": v} for k, v in page_items]
+            st.dataframe(rows, hide_index=True, use_container_width=True)
 
-    with st.expander("Show ALL placeholder names as text"):
-        st.text_area("Names", "\n".join(k for k, _ in view_items), height=300)
+            with st.expander("Show ALL placeholder names as text"):
+                st.text_area("Names", "\n".join(k for k, _ in view_items), height=300)
 
-    import json, yaml
-    st.download_button(
-        "Download placeholders as JSON",
-        data=json.dumps(dict(all_items), indent=2, ensure_ascii=False, default=str),
-        file_name="excel_placeholders.json",
-    )
-    st.download_button(
-        "Download placeholders as YAML",
-        data=yaml.safe_dump(dict(all_items), sort_keys=True, allow_unicode=True),
-        file_name="excel_placeholders.yaml",
-    )
+            import json, yaml
+            st.download_button(
+                "Download placeholders as JSON",
+                data=json.dumps(dict(all_items), indent=2, ensure_ascii=False, default=str),
+                file_name="excel_placeholders.json",
+            )
+            st.download_button(
+                "Download placeholders as YAML",
+                data=yaml.safe_dump(dict(all_items), sort_keys=True, allow_unicode=True),
+                file_name="excel_placeholders.yaml",
+            )
+            # -----------------------------------------
 
     except Exception as e:
         st.error(f"Excel error: {e}")
@@ -223,5 +226,5 @@ with st.expander("Debug (advanced)"):
     st.write("Repo root:", str(ROOT))
     st.write("Specs dir exists:", (SPECS_DIR.exists(), str(SPECS_DIR)))
     st.write("Imports:", {k: (True if v is True else f"{type(v).__name__}: {v}") for k, v in imports_ok.items()})
-    st.write("Excel bytes present:", excel_bytes is not None)
+    st.write("Excel bytes present:", st.session_state.get("excel_bytes") is not None)
     st.write("Excel values count:", len(st.session_state.get("excel_vals", {})))
