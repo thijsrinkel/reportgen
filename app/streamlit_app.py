@@ -1,67 +1,82 @@
 # app/streamlit_app.py
 from pathlib import Path
-from io import BytesIO
 import sys
-import time
+from io import BytesIO
 import zipfile
 import streamlit as st
-from pydantic import ValidationError
-from jinja2.exceptions import UndefinedError
 
-# --- make repo root importable ---
-ROOT = Path(__file__).resolve().parents[1]  # .../reportgen
+# ---------- PATH FIX (must be first) ----------
+ROOT = Path(__file__).resolve().parents[1]  # repo root
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-# ---------------------------------
-
-from core.models import JobData
-from core.renderer import render_all_to_memory
-from core.excel_parser import (
-    list_sheet_names_bytes,
-    parse_excel_nodes_bytes,
-)
-
-# optional caching wrappers for Excel ops
-@st.cache_data(show_spinner=False)
-def _sheets_for_bytes(b: bytes):
-    return list_sheet_names_bytes(b)
-
-@st.cache_data(show_spinner=False)
-def _parse_nodes_for_bytes(
-    b: bytes,
-    sheet: str,
-    node_col: str,
-    x_col: str,
-    y_col: str,
-    z_col: str,
-    only_nodes_tuple: tuple[str, ...],
-):
-    return parse_excel_nodes_bytes(
-        b, sheet,
-        node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
-        only_nodes=list(only_nodes_tuple)
-    )
-
-SPECS_DIR = ROOT / "template_specs"
+# ---------------------------------------------
 
 st.set_page_config(page_title="Caisson Reports", layout="centered")
 st.title("Caisson Reports")
 
-# ---------------- Excel upload & parse (optional) ----------------
+# ---------- SAFE IMPORTS ----------
+imports_ok = {}
+try:
+    from pydantic import ValidationError
+    imports_ok["pydantic"] = True
+except Exception as e:
+    imports_ok["pydantic"] = e
+
+try:
+    from jinja2.exceptions import UndefinedError
+    imports_ok["jinja2"] = True
+except Exception as e:
+    imports_ok["jinja2"] = e
+
+try:
+    from core.models import JobData
+    imports_ok["core.models"] = True
+except Exception as e:
+    imports_ok["core.models"] = e
+
+try:
+    from core.renderer import render_all_to_memory
+    imports_ok["core.renderer"] = True
+except Exception as e:
+    imports_ok["core.renderer"] = e
+
+# Excel is optional: app must still render without it
+excel_ready = True
+try:
+    from core.excel_parser import list_sheet_names_bytes, parse_excel_nodes_bytes
+    imports_ok["core.excel_parser"] = True
+except Exception as e:
+    imports_ok["core.excel_parser"] = e
+    excel_ready = False
+# ----------------------------------
+
+SPECS_DIR = ROOT / "template_specs"
+
+# ---------------- Excel (optional) ----------------
 st.subheader("Excel nodes (optional)")
 uploaded = st.file_uploader("Upload Excel (.xlsx)", type=["xlsx"])
 
-# keep parsed excel values & file bytes in session
-excel_vals = st.session_state.setdefault("excel_vals", {})
+# Show a quick smoke test so you know if Excel libs work
 if uploaded:
-    excel_bytes = uploaded.getvalue()  # single read
-    st.session_state["excel_bytes"] = excel_bytes
-else:
-    excel_bytes = st.session_state.get("excel_bytes")
-
-if excel_bytes:
     try:
-        sheets = _sheets_for_bytes(excel_bytes)
+        import pandas as pd
+        from io import BytesIO as _BytesIO
+        xls = pd.ExcelFile(_BytesIO(uploaded.getvalue()), engine="openpyxl")
+        st.caption("Excel OK. Sheets: " + ", ".join(xls.sheet_names))
+    except Exception as e:
+        st.warning(f"Excel smoke test failed: {e}")
+
+excel_vals = st.session_state.setdefault("excel_vals", {})
+excel_bytes = st.session_state.get("excel_bytes")
+
+if uploaded:
+    excel_bytes = uploaded.getvalue()
+    st.session_state["excel_bytes"] = excel_bytes
+
+if excel_bytes and excel_ready:
+    try:
+        # simple (no caching) to minimize moving parts while we debug UI
+        sheets = list_sheet_names_bytes(excel_bytes)
         sheet = st.selectbox("Choose sheet", sheets, key="sheet_pick")
 
         with st.expander("Columns (change if headers differ)", expanded=False):
@@ -71,33 +86,29 @@ if excel_bytes:
             z_col    = st.text_input("Z column", value="Z")
 
         filter_text = st.text_input("Only include these node names (comma separated)", value="")
-        only_nodes = tuple(s.strip() for s in filter_text.split(",") if s.strip())
+        only_nodes = [s.strip() for s in filter_text.split(",") if s.strip()] or None
 
         if st.button("Load nodes from Excel"):
-            t0 = time.perf_counter()
-            excel_vals = _parse_nodes_for_bytes(
-                excel_bytes, sheet, node_col, x_col, y_col, z_col, only_nodes
+            excel_vals = parse_excel_nodes_bytes(
+                excel_bytes, sheet,
+                node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
+                only_nodes=only_nodes
             )
             st.session_state["excel_vals"] = excel_vals
-            st.success(
-                f"Loaded {len(excel_vals)} placeholders from '{sheet}' "
-                f"in {time.perf_counter()-t0:0.2f}s"
-            )
-            # small preview only (avoid huge dumps)
+            st.success(f"Loaded {len(excel_vals)} placeholders from '{sheet}'.")
             if excel_vals:
-                keys = sorted(list(excel_vals.keys()))[:12]
                 st.caption("Preview (first 12):")
-                st.code(", ".join(keys))
+                st.code(", ".join(sorted(excel_vals.keys())[:12]))
     except Exception as e:
         st.error(f"Excel error: {e}")
+elif not excel_ready:
+    st.info("Excel parsing not available. You can still fill the form and render reports.")
 else:
     st.caption("Upload an .xlsx file to enable node import.")
-# ----------------------------------------------------------------
+# --------------------------------------------------
 
-# keep one data dict in session
+# ---------------- Form (always render) ----------------
 data = st.session_state.setdefault("data", {})
-
-# defaults so inputs always show
 defaults = {
     "CaissonNumber": "",
     "IP_1": "", "IP_2": "",
@@ -138,30 +149,26 @@ with st.form("job-form"):
 
     if st.form_submit_button("Save changes"):
         st.success("Saved.")
+# -----------------------------------------------------
 
-# Render
+# ---------------- Render & Download (always render) ----------------
 if st.button("Render reports"):
     try:
-        job = JobData.model_validate(data)  # validate static fields
+        if imports_ok.get("core.models") is not True or imports_ok.get("core.renderer") is not True:
+            raise RuntimeError("Core modules failed to import; see Debug panel below.")
+        from core.models import JobData  # re-import after possible reloads
+
+        # validate your static fields and merge Excel values
+        job = JobData.model_validate(data)
         combined = {**job.model_dump(), **st.session_state.get("excel_vals", {})}
         outputs = render_all_to_memory(combined, SPECS_DIR)
         st.session_state["rendered"] = outputs
         st.success(f"Generated {len(outputs)} report(s).")
-    except ValidationError as ve:
-        st.error("Some required data is missing or invalid.")
-        with st.expander("Details"):
-            for e in ve.errors():
-                st.write(f"{e['loc']}: {e['msg']}")
-    except UndefinedError as ue:
-        st.error("Template contains a placeholder your data doesn't have.")
-        with st.expander("Details"):
-            st.write(str(ue))
     except Exception as e:
         st.error(f"Render failed: {e}")
         import traceback
         st.code("".join(traceback.format_exc()))
 
-# Download
 rendered = st.session_state.get("rendered", {})
 if rendered:
     st.subheader("Download")
@@ -174,3 +181,12 @@ if rendered:
             for fname, blob in rendered.items():
                 zf.writestr(Path(fname).name, blob)
         st.download_button("Download ALL as ZIP", data=zbuf.getvalue(), file_name="reports.zip", mime="application/zip")
+# ------------------------------------------------------------------
+
+# ---------------- Debug panel (so you can see what's failing) ----------------
+with st.expander("Debug (advanced)"):
+    st.write("Repo root:", str(ROOT))
+    st.write("Specs dir exists:", (SPECS_DIR.exists(), str(SPECS_DIR)))
+    st.write("Imports:", {k: (True if v is True else f"{type(v).__name__}: {v}") for k, v in imports_ok.items()})
+    st.write("Excel bytes present:", excel_bytes is not None)
+    st.write("Excel values count:", len(st.session_state.get("excel_vals", {})))
