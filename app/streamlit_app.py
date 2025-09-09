@@ -79,10 +79,10 @@ if excel_bytes and excel_ready:
                 y_col    = st.text_input("Y column (header name or letter)", value="Y")
                 z_col    = st.text_input("Z column (header name or letter)", value="Z")
             else:
-                node_col = st.text_input("Node column (letter or 1-based index)", value="A")
-                x_col    = st.text_input("X column (letter or 1-based index)", value="B")
-                y_col    = st.text_input("Y column (letter or 1-based index)", value="C")
-                z_col    = st.text_input("Z column (letter or 1-based index)", value="D")
+                node_col = st.text_input("Node column (letter or 1-based index)", value="D")
+                x_col    = st.text_input("X column (letter or 1-based index)", value="H")
+                y_col    = st.text_input("Y column (letter or 1-based index)", value="I")
+                z_col    = st.text_input("Z column (letter or 1-based index)", value="J")
 
         filter_text = st.text_input("Only include these node names (comma separated)", value="")
         only_nodes = [s.strip() for s in filter_text.split(",") if s.strip()] or None
