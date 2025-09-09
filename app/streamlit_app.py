@@ -88,17 +88,52 @@ if excel_bytes and excel_ready:
         filter_text = st.text_input("Only include these node names (comma separated)", value="")
         only_nodes = [s.strip() for s in filter_text.split(",") if s.strip()] or None
 
-        if st.button("Load nodes from Excel"):
-            excel_vals = parse_excel_nodes_bytes(
-                excel_bytes, sheet,
-                node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
-                only_nodes=only_nodes
-            )
-            st.session_state["excel_vals"] = excel_vals
-            st.success(f"Loaded {len(excel_vals)} placeholders from '{sheet}'.")
-            if excel_vals:
-                st.caption("Preview (first 12):")
-                st.code(", ".join(sorted(excel_vals.keys())[:12]))
+if st.button("Load nodes from Excel"):
+    excel_vals = parse_excel_nodes_bytes(
+        excel_bytes, sheet,
+        node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
+        only_nodes=only_nodes,
+        has_header=has_header,
+    )
+    st.session_state["excel_vals"] = excel_vals
+    st.success(f"Loaded {len(excel_vals)} placeholders from '{sheet}'.")
+
+    # --- NEW full viewer instead of just 12 keys ---
+    all_items = sorted(excel_vals.items(), key=lambda kv: kv[0])
+    st.caption(f"{len(all_items)} placeholders loaded.")
+
+    q = st.text_input("Filter placeholders (case-insensitive)", value="")
+    if q:
+        ql = q.lower()
+        view_items = [kv for kv in all_items if ql in kv[0].lower()]
+    else:
+        view_items = all_items
+
+    PAGE_SIZE = 200
+    num_pages = max(1, (len(view_items) + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = st.number_input("Page", min_value=1, max_value=num_pages, value=1, step=1)
+    start = (page - 1) * PAGE_SIZE
+    end = start + PAGE_SIZE
+    page_items = view_items[start:end]
+
+    rows = [{"placeholder": k, "value": v} for k, v in page_items]
+    st.dataframe(rows, hide_index=True, use_container_width=True)
+
+    with st.expander("Show ALL placeholder names as text"):
+        st.text_area("Names", "\n".join(k for k, _ in view_items), height=300)
+
+    import json, yaml
+    st.download_button(
+        "Download placeholders as JSON",
+        data=json.dumps(dict(all_items), indent=2, ensure_ascii=False, default=str),
+        file_name="excel_placeholders.json",
+    )
+    st.download_button(
+        "Download placeholders as YAML",
+        data=yaml.safe_dump(dict(all_items), sort_keys=True, allow_unicode=True),
+        file_name="excel_placeholders.yaml",
+    )
+
     except Exception as e:
         st.error(f"Excel error: {e}")
 elif not excel_ready:
