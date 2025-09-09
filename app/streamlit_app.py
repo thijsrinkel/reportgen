@@ -74,10 +74,10 @@ if excel_bytes and excel_ready:
         with st.expander("Columns / header options", expanded=False):
             has_header = st.checkbox("My sheet has a header row", value=True)
             if has_header:
-                node_col = st.text_input("Node column (header name or letter)", value="Node")
-                x_col    = st.text_input("X column (header name or letter)", value="X")
-                y_col    = st.text_input("Y column (header name or letter)", value="Y")
-                z_col    = st.text_input("Z column (header name or letter)", value="Z")
+                node_col = st.text_input("Node column (header name or letter)", value="D")
+                x_col    = st.text_input("X column (header name or letter)", value="H")
+                y_col    = st.text_input("Y column (header name or letter)", value="I")
+                z_col    = st.text_input("Z column (header name or letter)", value="J")
             else:
                 node_col = st.text_input("Node column (letter or 1-based index)", value="D")
                 x_col    = st.text_input("X column (letter or 1-based index)", value="H")
