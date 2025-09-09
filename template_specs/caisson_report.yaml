@@ -14,4 +14,10 @@ required_fields:
   - SN_Ant4
   - MCRDocumentReference
   - DIMCONDocumentReference
+  - Roll_IP1
+  - Pitch_IP1
+  - Yaw_IP1
+  - Roll_IP2
+  - Pitch_IP2
+  - Yaw_IP2
 aliases: {}
