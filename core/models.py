@@ -24,3 +24,11 @@ class JobData(BaseModel):
     DIMCONDocumentReference: Optional[str] = None
     DocumentReference8: Optional[str] = None
     DocumentReference9: Optional[str] = None
+
+    # IMU Values
+    Roll_IP1: Optional[str] = None
+    Pitch_IP1: Optional[str] = None
+    Yaw_IP1: Optional[str] = None
+    Roll_IP2: Optional[str] = None
+    Pitch_IP2: Optional[str] = None
+    Yaw_IP2: Optional[str] = None
