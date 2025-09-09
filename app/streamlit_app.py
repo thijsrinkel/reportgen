@@ -1,58 +1,63 @@
+# app/streamlit_app.py
 from pathlib import Path
 from io import BytesIO
+import sys
+import time
+import zipfile
 import streamlit as st
 from pydantic import ValidationError
 from jinja2.exceptions import UndefinedError
-import zipfile
+
 # --- make repo root importable ---
-from pathlib import Path
-import sys
 ROOT = Path(__file__).resolve().parents[1]  # .../reportgen
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 # ---------------------------------
+
 from core.models import JobData
 from core.renderer import render_all_to_memory
+from core.excel_parser import (
+    list_sheet_names_bytes,
+    parse_excel_nodes_bytes,
+)
 
-import hashlib
-import time
-from core.excel_parser import list_sheet_names_bytes, parse_excel_nodes_bytes
-
+# optional caching wrappers for Excel ops
 @st.cache_data(show_spinner=False)
 def _sheets_for_bytes(b: bytes):
     return list_sheet_names_bytes(b)
 
 @st.cache_data(show_spinner=False)
-def _parse_nodes_for_bytes(b: bytes, sheet: str, node_col: str, x_col: str, y_col: str, z_col: str, only_nodes_tuple: tuple[str,...]):
-    return parse_excel_nodes_bytes(b, sheet, node_col, x_col, y_col, z_col, list(only_nodes_tuple))
+def _parse_nodes_for_bytes(
+    b: bytes,
+    sheet: str,
+    node_col: str,
+    x_col: str,
+    y_col: str,
+    z_col: str,
+    only_nodes_tuple: tuple[str, ...],
+):
+    return parse_excel_nodes_bytes(
+        b, sheet,
+        node_col=node_col, x_col=x_col, y_col=y_col, z_col=z_col,
+        only_nodes=list(only_nodes_tuple)
+    )
 
-
-# repo root + specs dir
-ROOT = Path(__file__).resolve().parents[1]
 SPECS_DIR = ROOT / "template_specs"
 
 st.set_page_config(page_title="Caisson Reports", layout="centered")
 st.title("Caisson Reports")
 
-from core.excel_parser import list_sheet_names, parse_excel_nodes
-
+# ---------------- Excel upload & parse (optional) ----------------
 st.subheader("Excel nodes (optional)")
 uploaded = st.file_uploader("Upload Excel (.xlsx)", type=["xlsx"])
 
-# keep parsed excel values in session
+# keep parsed excel values & file bytes in session
 excel_vals = st.session_state.setdefault("excel_vals", {})
-
-st.subheader("Excel nodes (optional)")
-uploaded = st.file_uploader("Upload Excel (.xlsx)", type=["xlsx"])
-
-# store excel bytes once to avoid consumed/closed stream issues
 if uploaded:
     excel_bytes = uploaded.getvalue()  # single read
     st.session_state["excel_bytes"] = excel_bytes
 else:
     excel_bytes = st.session_state.get("excel_bytes")
-
-excel_vals = st.session_state.setdefault("excel_vals", {})
 
 if excel_bytes:
     try:
@@ -70,10 +75,15 @@ if excel_bytes:
 
         if st.button("Load nodes from Excel"):
             t0 = time.perf_counter()
-            excel_vals = _parse_nodes_for_bytes(excel_bytes, sheet, node_col, x_col, y_col, z_col, only_nodes)
+            excel_vals = _parse_nodes_for_bytes(
+                excel_bytes, sheet, node_col, x_col, y_col, z_col, only_nodes
+            )
             st.session_state["excel_vals"] = excel_vals
-            st.success(f"Loaded {len(excel_vals)} placeholders from '{sheet}' in {time.perf_counter()-t0:0.2f}s")
-            # small preview only (avoid dumping huge dicts)
+            st.success(
+                f"Loaded {len(excel_vals)} placeholders from '{sheet}' "
+                f"in {time.perf_counter()-t0:0.2f}s"
+            )
+            # small preview only (avoid huge dumps)
             if excel_vals:
                 keys = sorted(list(excel_vals.keys()))[:12]
                 st.caption("Preview (first 12):")
@@ -82,12 +92,10 @@ if excel_bytes:
         st.error(f"Excel error: {e}")
 else:
     st.caption("Upload an .xlsx file to enable node import.")
+# ----------------------------------------------------------------
 
 # keep one data dict in session
-if "data" not in st.session_state:
-    st.session_state.data = {}
-
-data = st.session_state.data
+data = st.session_state.setdefault("data", {})
 
 # defaults so inputs always show
 defaults = {
@@ -128,33 +136,41 @@ with st.form("job-form"):
         data["DIMCONDocumentReference"] = st.text_input("DIMCONDocumentReference", value=data.get("DIMCONDocumentReference",""))
         data["DocumentReference9"] = st.text_input("DocumentReference9", value=data.get("DocumentReference9",""))
 
-    submitted = st.form_submit_button("Save changes")
-    if submitted:
+    if st.form_submit_button("Save changes"):
         st.success("Saved.")
 
 # Render
 if st.button("Render reports"):
     try:
-        job = JobData.model_validate(data)
+        job = JobData.model_validate(data)  # validate static fields
         combined = {**job.model_dump(), **st.session_state.get("excel_vals", {})}
         outputs = render_all_to_memory(combined, SPECS_DIR)
         st.session_state["rendered"] = outputs
         st.success(f"Generated {len(outputs)} report(s).")
+    except ValidationError as ve:
+        st.error("Some required data is missing or invalid.")
+        with st.expander("Details"):
+            for e in ve.errors():
+                st.write(f"{e['loc']}: {e['msg']}")
+    except UndefinedError as ue:
+        st.error("Template contains a placeholder your data doesn't have.")
+        with st.expander("Details"):
+            st.write(str(ue))
     except Exception as e:
         st.error(f"Render failed: {e}")
-        import traceback; st.code("".join(traceback.format_exc()))
-
+        import traceback
+        st.code("".join(traceback.format_exc()))
 
 # Download
-if "rendered" in st.session_state and st.session_state.rendered:
+rendered = st.session_state.get("rendered", {})
+if rendered:
     st.subheader("Download")
-    for fname, blob in st.session_state.rendered.items():
+    for fname, blob in rendered.items():
         name = Path(fname).name
         st.download_button(f"Download {name}", data=blob, file_name=name)
-
-    if len(st.session_state.rendered) > 1:
+    if len(rendered) > 1:
         zbuf = BytesIO()
         with zipfile.ZipFile(zbuf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for fname, blob in st.session_state.rendered.items():
+            for fname, blob in rendered.items():
                 zf.writestr(Path(fname).name, blob)
         st.download_button("Download ALL as ZIP", data=zbuf.getvalue(), file_name="reports.zip", mime="application/zip")
