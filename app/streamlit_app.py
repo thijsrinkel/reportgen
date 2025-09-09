@@ -179,7 +179,7 @@ with st.form("job-form"):
         data["SN_SBG2"] = st.text_input("SN_SBG2", value=data.get("SN_SBG2",""))
         data["SN_Septentrio2"] = st.text_input("SN_Septentrio2", value=data.get("SN_Septentrio2",""))
         data["SN_Ant3"] = st.text_input("SN_Ant3", value=data.get("SN_Ant3",""))
-        data["SN_Ant4"] = st.text_input("SN_Ant4", value=data.get("SN_Ant4","")).
+        data["SN_Ant4"] = st.text_input("SN_Ant4", value=data.get("SN_Ant4",""))
         data["Roll_IP2"] = st.text_input("Roll_IP2", value=data.get("Roll_IP2",""))
         data["Pitch_IP2"] = st.text_input("Pitch_IP2", value=data.get("Pitch_IP2",""))
         data["Yaw_IP2"] = st.text_input("Yaw_IP2", value=data.get("Yaw_IP2",""))
