@@ -154,6 +154,8 @@ defaults = {
     "SN_SBG2": "", "SN_Septentrio2": "", "SN_Ant3": "", "SN_Ant4": "",
     "MCRDocumentReference": "", "DIMCONDocumentReference": "",
     "DocumentReference8": "", "DocumentReference9": "",
+    "Roll_IP1": "", "Pitch_IP1": "", "Yaw_IP1": "",
+    "Roll_IP2": "", "Pitch_IP2": "", "Yaw_IP2": "",
 }
 for k, v in defaults.items():
     data.setdefault(k, v)
@@ -169,12 +171,18 @@ with st.form("job-form"):
         data["SN_Septentrio1"] = st.text_input("SN_Septentrio1", value=data.get("SN_Septentrio1",""))
         data["SN_Ant1"] = st.text_input("SN_Ant1", value=data.get("SN_Ant1",""))
         data["SN_Ant2"] = st.text_input("SN_Ant2", value=data.get("SN_Ant2",""))
+        data["Roll_IP1"] = st.text_input("Roll_IP1", value=data.get("Roll_IP1",""))
+        data["Pitch_IP1"] = st.text_input("Pitch_IP1", value=data.get("Pitch_IP1",""))
+        data["Yaw_IP1"] = st.text_input("Yaw_IP1", value=data.get("Yaw_IP1",""))
     with c2:
         data["IP_2"] = st.text_input("IP_2", value=data.get("IP_2",""))
         data["SN_SBG2"] = st.text_input("SN_SBG2", value=data.get("SN_SBG2",""))
         data["SN_Septentrio2"] = st.text_input("SN_Septentrio2", value=data.get("SN_Septentrio2",""))
         data["SN_Ant3"] = st.text_input("SN_Ant3", value=data.get("SN_Ant3",""))
-        data["SN_Ant4"] = st.text_input("SN_Ant4", value=data.get("SN_Ant4",""))
+        data["SN_Ant4"] = st.text_input("SN_Ant4", value=data.get("SN_Ant4","")).
+        data["Roll_IP2"] = st.text_input("Roll_IP2", value=data.get("Roll_IP2",""))
+        data["Pitch_IP2"] = st.text_input("Pitch_IP2", value=data.get("Pitch_IP2",""))
+        data["Yaw_IP2"] = st.text_input("Yaw_IP2", value=data.get("Yaw_IP2",""))
 
     st.subheader("Document References")
     c3, c4 = st.columns(2)
