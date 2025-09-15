@@ -58,13 +58,13 @@ if excel_bytes and excel_ready:
             with c2: left_x_col    = st.text_input("X col",    value="B")
             with c3: left_y_col    = st.text_input("Y col",    value="C")
             with c4: left_z_col    = st.text_input("Z col",    value="D")
-            left_has_header = st.checkbox("Has header row", value=True)
+            left_has_header = st.checkbox("Nodes have header row", value=True)
 
             st.caption("Seiral Numbers and Document References (I–J): Placeholder → Value")
             c5, c6 = st.columns(2)
             with c5: right_key_col = st.text_input("Key col",   value="I")
             with c6: right_val_col = st.text_input("Value col", value="J")
-            right_has_header = st.checkbox("Has header row", value=True)
+            right_has_header = st.checkbox("Placeholders have header row", value=True)
 
             only_nodes_text = st.text_input("Only include these LEFT node names (comma-separated)", value="")
             only_nodes = [s.strip() for s in only_nodes_text.split(",") if s.strip()] or None
