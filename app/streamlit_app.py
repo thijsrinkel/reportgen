@@ -13,7 +13,8 @@ if str(ROOT) not in sys.path:
 # ---------------------------------------------
 
 st.set_page_config(page_title="Caisson Reports", layout="centered")
-st.title("Caisson Reports")
+st.image("img/TM Edison.png", width=300)
+st.title("MOG 2 MCR & DIMCON Report Generator")
 
 # ---------- SAFE IMPORTS ----------
 imports_ok = {}
@@ -51,19 +52,19 @@ if excel_bytes and excel_ready:
         sheet = st.selectbox("Choose sheet", sheets, key="sheet_pick")
 
         with st.expander("Column settings", expanded=False):
-            st.caption("Left block (A–D): Node + XYZ")
+            st.caption("Caisson Offsets (A–D): Node + XYZ")
             c1, c2, c3, c4 = st.columns(4)
             with c1: left_node_col = st.text_input("Node col", value="A")
             with c2: left_x_col    = st.text_input("X col",    value="B")
             with c3: left_y_col    = st.text_input("Y col",    value="C")
             with c4: left_z_col    = st.text_input("Z col",    value="D")
-            left_has_header = st.checkbox("Left has header row", value=True)
+            left_has_header = st.checkbox("Has header row", value=True)
 
-            st.caption("Right block (I–J): Placeholder → Value")
+            st.caption("Seiral Numbers and Document References (I–J): Placeholder → Value")
             c5, c6 = st.columns(2)
             with c5: right_key_col = st.text_input("Key col",   value="I")
             with c6: right_val_col = st.text_input("Value col", value="J")
-            right_has_header = st.checkbox("Right has header row", value=True)
+            right_has_header = st.checkbox("Has header row", value=True)
 
             only_nodes_text = st.text_input("Only include these LEFT node names (comma-separated)", value="")
             only_nodes = [s.strip() for s in only_nodes_text.split(",") if s.strip()] or None
